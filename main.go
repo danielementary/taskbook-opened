@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+)
 
 type taskStatus int
 
@@ -96,6 +99,19 @@ func main() {
 	tb.boards[0].tasks = append(tb.boards[0].tasks, &task{id: 1, description: "implement taskbook opened!", status: Pending})
 
 	tb.newBoard("Chill")
+
+	taskPtr := flag.String("task", "", "the description of the new task to add preceded by the corresponding #board")
+	notePtr := flag.String("note", "", "the description of the new note to add preceded by the corresponding #board")
+
+	flag.Parse()
+
+	if len(*taskPtr) > 0 {
+		// add a new task
+	}
+
+	if len(*notePtr) > 0 {
+		// add a new note
+	}
 
 	tb.display()
 }
