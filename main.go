@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"strings"
 )
 
 type taskStatus int
@@ -90,10 +92,31 @@ func (tb *taskbook) display() {
 	}
 }
 
-func main() {
-	tb := taskbook{boards: []*board{}}
+func parseBoardName(s *string) (*string, error) {
+	boardName := strings.Split(*s, " ")[0]
 
+	if boardName[0] != '#' || len(boardName) <= 1 {
+		return nil, errors.New("invalid board name")
+	}
+
+	return &boardName, nil
+}
+
+func parseDescription(s *string) (*string, error) {
+	description := strings.Join(strings.Split(*s, " ")[1:], " ")
+
+	if len(description) <= 1 {
+		return nil, errors.New("invalid description")
+	}
+
+	return &description, nil
+}
+
+func main() {
 	fmt.Print(" Taskbook opened!\n\n")
+
+	tb := taskbook{boards: []*board{}}
+	defer tb.display()
 
 	tb.newBoard("Coding")
 	tb.boards[0].tasks = append(tb.boards[0].tasks, &task{id: 1, description: "implement taskbook opened!", status: Pending})
@@ -112,6 +135,4 @@ func main() {
 	if len(*notePtr) > 0 {
 		// add a new note
 	}
-
-	tb.display()
 }
