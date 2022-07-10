@@ -14,32 +14,49 @@ type note struct {
 }
 
 type taskbook struct {
-	number_of_boards uint
-	boards           []*board
+	boards []*board
 }
 
 type board struct {
-	id    uint
-	name  string
-	tasks []*task
-	notes []*note
+	name            string
+	tasksPending    []*task
+	tasksInProgress []*task
+	tasksCompleted  []*task
+	notes           []*note
+}
+
+func (b *board) display() {
+	numberOfTasksCompleted := len(b.tasksCompleted)
+	numberOfTasks := len(b.tasksPending) + len(b.tasksInProgress) + numberOfTasksCompleted
+
+	fmt.Printf("  #%s [%d/%d]", b.name, numberOfTasksCompleted, numberOfTasks)
 }
 
 func (tb *taskbook) newBoard(name string) {
-	var id = tb.number_of_boards
-	tb.number_of_boards++
+	tasksPending := []*task{}
+	tasksInProgress := []*task{}
+	tasksCompleted := []*task{}
+	notes := []*note{}
 
-	var tasks = []*task{}
-	var notes = []*note{}
-
-	var board = board{id, name, tasks, notes}
+	board := board{name, tasksPending, tasksInProgress, tasksCompleted, notes}
 
 	tb.boards = append(tb.boards, &board)
 }
 
+func (tb *taskbook) display() {
+	for _, board := range tb.boards {
+		board.display()
+		fmt.Println()
+	}
+}
+
 func main() {
-	var tb = taskbook{number_of_boards: 0, boards: []*board{}}
+	tb := taskbook{boards: []*board{}}
+
 	fmt.Println("Taskbook opened!")
 
 	tb.newBoard("Coding")
+	tb.newBoard("Chill")
+
+	tb.display()
 }
