@@ -40,37 +40,31 @@ func (t *task) display() {
 }
 
 type board struct {
-	name    string
-	counter uint
-	tasks   []*task
+	name          string
+	counter       uint
+	tasks         []*task
+	numberOfTasks map[taskStatus]uint
 }
 
 func newBoard(name string) *board {
 	counter := uint(1)
 	tasks := []*task{}
+	numberOfTasks := make(map[taskStatus]uint)
 
-	return &board{name, counter, tasks}
-}
+	numberOfTasks[InProgress] = uint(0)
+	numberOfTasks[Pending] = uint(0)
+	numberOfTasks[Completed] = uint(0)
+	numberOfTasks[Note] = uint(0)
 
-func (b *board) getNumberOfTasksCompleted() (numberOfTasksCompleted int) {
-	numberOfTasksCompleted = 0
-
-	for _, t := range b.tasks {
-		if t.status == Completed {
-			numberOfTasksCompleted++
-		}
-	}
-
-	return
+	return &board{name, counter, tasks, numberOfTasks}
 }
 
 func (b *board) display() {
-	numberOfTasksCompleted := b.getNumberOfTasksCompleted()
-	numberOfTasks := len(b.tasks) + numberOfTasksCompleted
+	totalNumberOfTasks := b.numberOfTasks[InProgress] + b.numberOfTasks[Pending] + b.numberOfTasks[Completed]
 
-	fmt.Printf("  %s [%d/%d]\n", b.name, numberOfTasksCompleted, numberOfTasks)
+	fmt.Printf("  %s [%d/%d]\n", b.name, b.numberOfTasks[Completed], totalNumberOfTasks)
 
-	if numberOfTasks <= 0 {
+	if totalNumberOfTasks <= 0 {
 		fmt.Print("    This board is empty.")
 	} else {
 		for _, t := range b.tasks {
@@ -120,6 +114,7 @@ func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus
 	status := taskStatus
 
 	board.tasks = append(board.tasks, &task{id, description, status})
+	board.numberOfTasks[status]++
 }
 
 func parseBoardNameAndTaskDescription(s string) (string, string, error) {
@@ -144,6 +139,11 @@ func main() {
 
 	tb := newTaskbook()
 	defer tb.display()
+
+	tb.addTask("#coding work on taskbook-opened", Pending)
+	tb.addTask("#coding do not forget about testing...", Note)
+
+	tb.addTask("#chill go to bed", Pending)
 
 	taskPtr := flag.String("task", "", "the description of the new task to add preceded by the corresponding #board")
 	notePtr := flag.String("note", "", "the description of the new note to add preceded by the corresponding #board")
