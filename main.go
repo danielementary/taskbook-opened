@@ -1,11 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 )
+
+const storageDirectory = ".taskbook-opened"
+const storageFile = "storage.json"
 
 type taskStatus int
 
@@ -17,15 +24,15 @@ const (
 )
 
 type task struct {
-	id          uint
-	description string
-	status      taskStatus
+	Id          uint
+	Description string
+	Status      taskStatus
 }
 
 func (t *task) display() {
-	fmt.Printf("    %d. ", t.id)
+	fmt.Printf("    %d. ", t.Id)
 
-	switch t.status {
+	switch t.Status {
 	case InProgress:
 		fmt.Print("[/]")
 	case Pending:
@@ -36,14 +43,14 @@ func (t *task) display() {
 		fmt.Print("-N-")
 	}
 
-	fmt.Printf(" %s\n", t.description)
+	fmt.Printf(" %s\n", t.Description)
 }
 
 type board struct {
-	name          string
-	counter       uint
-	tasks         []*task
-	numberOfTasks map[taskStatus]uint
+	Name          string
+	Counter       uint
+	Tasks         []*task
+	NumberOfTasks map[taskStatus]uint
 }
 
 func newBoard(name string) *board {
@@ -60,14 +67,14 @@ func newBoard(name string) *board {
 }
 
 func (b *board) display() {
-	totalNumberOfTasks := b.numberOfTasks[InProgress] + b.numberOfTasks[Pending] + b.numberOfTasks[Completed]
+	totalNumberOfTasks := b.NumberOfTasks[InProgress] + b.NumberOfTasks[Pending] + b.NumberOfTasks[Completed]
 
-	fmt.Printf("  %s [%d/%d]\n", b.name, b.numberOfTasks[Completed], totalNumberOfTasks)
+	fmt.Printf("  %s [%d/%d]\n", b.Name, b.NumberOfTasks[Completed], totalNumberOfTasks)
 
 	if totalNumberOfTasks <= 0 {
 		fmt.Print("    This board is empty.")
 	} else {
-		for _, t := range b.tasks {
+		for _, t := range b.Tasks {
 			t.display()
 		}
 	}
@@ -75,7 +82,7 @@ func (b *board) display() {
 }
 
 type taskbook struct {
-	boards map[string]*board
+	Boards map[string]*board
 }
 
 func newTaskbook() *taskbook {
@@ -85,8 +92,36 @@ func newTaskbook() *taskbook {
 }
 
 func (tb *taskbook) display() {
-	for _, board := range tb.boards {
+	for _, board := range tb.Boards {
 		board.display()
+	}
+}
+
+func (tb *taskbook) saveToFile() {
+	json, err := json.MarshalIndent(tb, "", " ")
+	if err != nil {
+		fmt.Println(" Failed to save to file:", err)
+		return
+	}
+
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(" Failed to save to file:", err)
+		return
+	}
+
+	storageDirectorypath := filepath.Join(userHomeDir, storageDirectory)
+	err = os.MkdirAll(storageDirectorypath, os.ModePerm)
+	if err != nil {
+		fmt.Println(" Failed to save to file:", err)
+		return
+	}
+
+	storageFilepath := filepath.Join(userHomeDir, storageDirectory, storageFile)
+	err = ioutil.WriteFile(storageFilepath, json, 0644)
+	if err != nil {
+		fmt.Println(" Failed to save to file:", err)
+		return
 	}
 }
 
@@ -101,20 +136,20 @@ func (tb *taskbook) addTask(s string, taskStatus taskStatus) {
 }
 
 func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus taskStatus) {
-	board, found := tb.boards[boardName]
+	board, found := tb.Boards[boardName]
 
 	if !found {
-		tb.boards[boardName] = newBoard(boardName)
-		board = tb.boards[boardName]
+		tb.Boards[boardName] = newBoard(boardName)
+		board = tb.Boards[boardName]
 	}
 
-	id := board.counter
-	board.counter++
+	id := board.Counter
+	board.Counter++
 	description := taskDescription
 	status := taskStatus
 
-	board.tasks = append(board.tasks, &task{id, description, status})
-	board.numberOfTasks[status]++
+	board.Tasks = append(board.Tasks, &task{id, description, status})
+	board.NumberOfTasks[status]++
 }
 
 func parseBoardNameAndTaskDescription(s string) (string, string, error) {
@@ -139,6 +174,7 @@ func main() {
 
 	tb := newTaskbook()
 	defer tb.display()
+	defer tb.saveToFile()
 
 	tb.addTask("#coding work on taskbook-opened", Pending)
 	tb.addTask("#coding do not forget about testing...", Note)
@@ -157,4 +193,5 @@ func main() {
 	if len(*notePtr) > 0 {
 		tb.addTask(*notePtr, Note)
 	}
+
 }
