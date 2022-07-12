@@ -36,13 +36,20 @@ func (t *task) display() {
 		fmt.Print("-N-")
 	}
 
-	fmt.Printf(" %s", t.description)
+	fmt.Printf(" %s\n", t.description)
 }
 
 type board struct {
 	name    string
 	counter uint
 	tasks   []*task
+}
+
+func newBoard(name string) *board {
+	counter := uint(1)
+	tasks := []*task{}
+
+	return &board{name, counter, tasks}
 }
 
 func (b *board) getNumberOfTasksCompleted() (numberOfTasksCompleted int) {
@@ -61,7 +68,7 @@ func (b *board) display() {
 	numberOfTasksCompleted := b.getNumberOfTasksCompleted()
 	numberOfTasks := len(b.tasks) + numberOfTasksCompleted
 
-	fmt.Printf("  #%s [%d/%d]\n", b.name, numberOfTasksCompleted, numberOfTasks)
+	fmt.Printf("  %s [%d/%d]\n", b.name, numberOfTasksCompleted, numberOfTasks)
 
 	if numberOfTasks <= 0 {
 		fmt.Print("    This board is empty.")
@@ -70,20 +77,17 @@ func (b *board) display() {
 			t.display()
 		}
 	}
-	fmt.Print("\n\n")
+	fmt.Print("\n")
 }
 
 type taskbook struct {
-	boards []*board
+	boards map[string]*board
 }
 
-func (tb *taskbook) newBoard(name string) {
-	counter := uint(1)
-	tasks := []*task{}
+func newTaskbook() *taskbook {
+	boards := make(map[string]*board)
 
-	board := board{name, counter, tasks}
-
-	tb.boards = append(tb.boards, &board)
+	return &taskbook{boards}
 }
 
 func (tb *taskbook) display() {
@@ -92,36 +96,54 @@ func (tb *taskbook) display() {
 	}
 }
 
-func parseBoardName(s *string) (*string, error) {
-	boardName := strings.Split(*s, " ")[0]
+func (tb *taskbook) addTask(s string, taskStatus taskStatus) {
+	boardName, taskDescription, err := parseBoardNameAndTaskDescription(s)
 
-	if boardName[0] != '#' || len(boardName) <= 1 {
-		return nil, errors.New("invalid board name")
+	if err != nil {
+		fmt.Println(" Failed to add task:", err)
+	} else {
+		tb.addTaskToBoard(boardName, taskDescription, taskStatus)
 	}
-
-	return &boardName, nil
 }
 
-func parseDescription(s *string) (*string, error) {
-	description := strings.Join(strings.Split(*s, " ")[1:], " ")
+func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus taskStatus) {
+	board, found := tb.boards[boardName]
 
-	if len(description) <= 1 {
-		return nil, errors.New("invalid description")
+	if !found {
+		tb.boards[boardName] = newBoard(boardName)
+		board = tb.boards[boardName]
 	}
 
-	return &description, nil
+	id := board.counter
+	board.counter++
+	description := taskDescription
+	status := taskStatus
+
+	board.tasks = append(board.tasks, &task{id, description, status})
+}
+
+func parseBoardNameAndTaskDescription(s string) (string, string, error) {
+	splitS := strings.Split(s, " ")
+
+	boardName := splitS[0]
+	description := strings.Join(splitS[1:], " ")
+
+	if boardName[0] != '#' || len(boardName) <= 1 {
+		return "", "", errors.New("invalid board name")
+	}
+
+	if len(description) <= 1 {
+		return "", "", errors.New("invalid description")
+	}
+
+	return boardName, description, nil
 }
 
 func main() {
 	fmt.Print(" Taskbook opened!\n\n")
 
-	tb := taskbook{boards: []*board{}}
+	tb := newTaskbook()
 	defer tb.display()
-
-	tb.newBoard("Coding")
-	tb.boards[0].tasks = append(tb.boards[0].tasks, &task{id: 1, description: "implement taskbook opened!", status: Pending})
-
-	tb.newBoard("Chill")
 
 	taskPtr := flag.String("task", "", "the description of the new task to add preceded by the corresponding #board")
 	notePtr := flag.String("note", "", "the description of the new note to add preceded by the corresponding #board")
@@ -129,10 +151,10 @@ func main() {
 	flag.Parse()
 
 	if len(*taskPtr) > 0 {
-		// add a new task
+		tb.addTask(*taskPtr, Pending)
 	}
 
 	if len(*notePtr) > 0 {
-		// add a new note
+		tb.addTask(*notePtr, Note)
 	}
 }
