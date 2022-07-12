@@ -176,8 +176,10 @@ func main() {
 	defer tb.display()
 	defer tb.saveToFile()
 
-	tb.addTask("#coding work on taskbook-opened", Pending)
+	tb.addTask("#coding work on taskbook-opened", InProgress)
 	tb.addTask("#coding do not forget about testing...", Note)
+	tb.addTask("#coding fuzz the code", Pending)
+	tb.addTask("#coding start the project", Completed)
 
 	tb.addTask("#chill go to bed", Pending)
 
@@ -193,5 +195,4 @@ func main() {
 	if len(*notePtr) > 0 {
 		tb.addTask(*notePtr, Note)
 	}
-
 }
