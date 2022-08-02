@@ -97,8 +97,36 @@ func (tb *taskbook) display() {
 	}
 }
 
+func readFromFileOrCreate() (tb *taskbook) {
+	tb, err := readFromFile()
+
+	if err != nil {
+		tb = newTaskbook()
+	}
+
+	return
+}
+
+func readFromFile() (tb *taskbook, err error) {
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	storageFilepath := filepath.Join(userHomeDir, storageDirectory, storageFile)
+
+	tbJson, err := ioutil.ReadFile(storageFilepath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(tbJson, &tb)
+
+	return
+}
+
 func (tb *taskbook) saveToFile() {
-	json, err := json.MarshalIndent(tb, "", " ")
+	tbJson, err := json.MarshalIndent(tb, "", " ")
 	if err != nil {
 		fmt.Println(" Failed to save to file:", err)
 		return
@@ -117,8 +145,8 @@ func (tb *taskbook) saveToFile() {
 		return
 	}
 
-	storageFilepath := filepath.Join(userHomeDir, storageDirectory, storageFile)
-	err = ioutil.WriteFile(storageFilepath, json, 0644)
+	storageFilepath := filepath.Join(storageDirectorypath, storageFile)
+	err = ioutil.WriteFile(storageFilepath, tbJson, 0644)
 	if err != nil {
 		fmt.Println(" Failed to save to file:", err)
 		return
@@ -172,16 +200,9 @@ func parseBoardNameAndTaskDescription(s string) (string, string, error) {
 func main() {
 	fmt.Print(" Taskbook opened!\n\n")
 
-	tb := newTaskbook()
+	tb := readFromFileOrCreate()
 	defer tb.display()
 	defer tb.saveToFile()
-
-	tb.addTask("#coding work on taskbook-opened", InProgress)
-	tb.addTask("#coding do not forget about testing...", Note)
-	tb.addTask("#coding fuzz the code", Pending)
-	tb.addTask("#coding start the project", Completed)
-
-	tb.addTask("#chill go to bed", Pending)
 
 	taskPtr := flag.String("task", "", "the description of the new task to add preceded by the corresponding #board")
 	notePtr := flag.String("note", "", "the description of the new note to add preceded by the corresponding #board")
