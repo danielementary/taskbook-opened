@@ -2,12 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const storageDirectory = ".taskbook-opened"
@@ -161,15 +159,15 @@ func (tb *taskbook) saveToStorageFile(storageFilepath string) {
 	}
 }
 
-func (tb *taskbook) addTask(s string, taskStatus taskStatus) {
-	boardName, taskDescription, err := parseBoardNameAndTaskDescription(s)
+// func (tb *taskbook) addTask(s string, taskStatus taskStatus) {
+// 	boardName, taskDescription, err := parseBoardNameAndTaskDescription(s)
 
-	if err != nil {
-		fmt.Println(" Failed to add task:", err)
-	} else {
-		tb.addTaskToBoard(boardName, taskDescription, taskStatus)
-	}
-}
+// 	if err != nil {
+// 		fmt.Println(" Failed to add task:", err)
+// 	} else {
+// 		tb.addTaskToBoard(boardName, taskDescription, taskStatus)
+// 	}
+// }
 
 func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus taskStatus) {
 	board, found := tb.Boards[boardName]
@@ -188,45 +186,34 @@ func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus
 	board.NumberOfTasks[status]++
 }
 
-func parseBoardNameAndTaskDescription(s string) (string, string, error) {
-	splitS := strings.Split(s, " ")
+func parseBoardTags(taskTextSlice []string) []string {
+	boardTags := make([]string, 0)
 
-	boardName := splitS[0]
-	description := strings.Join(splitS[1:], " ")
-
-	if boardName[0] != '#' || len(boardName) <= 1 {
-		return "", "", errors.New("invalid board name")
+	for _, s := range taskTextSlice {
+		if s[0] == '#' {
+			boardTags = append(boardTags, s)
+		}
 	}
 
-	if len(description) <= 1 {
-		return "", "", errors.New("invalid description")
-	}
-
-	return boardName, description, nil
+	return boardTags
 }
 
 func main() {
 	fmt.Print(" Taskbook opened!\n\n")
 
-	initStorageFile()
+	storageFilepath := initStorageFile()
 
-	// storageFile := openStorageFile()
-	// defer closeStorageFile(storageFile)
+	tb := readTaskbookFromStorageFile(storageFilepath)
+	defer tb.saveToStorageFile(storageFilepath)
+	defer tb.display()
 
-	// tb := readFromFileOrCreate()
-	// defer tb.display()
-	// defer tb.saveToFile()
+	if len(os.Args) <= 1 {
+		return
+	}
 
-	// taskPtr := flag.String("task", "", "the description of the new task to add preceded by the corresponding #board")
-	// notePtr := flag.String("note", "", "the description of the new note to add preceded by the corresponding #board")
+	taskTextSlice := os.Args[1:]
+	boardTagsSlice := parseBoardTags(taskTextSlice)
 
-	// flag.Parse()
-
-	// if len(*taskPtr) > 0 {
-	// 	tb.addTask(*taskPtr, Pending)
-	// }
-
-	// if len(*notePtr) > 0 {
-	// 	tb.addTask(*notePtr, Note)
-	// }
+	fmt.Printf("DEBUG task text:  %s\n", taskTextSlice)
+	fmt.Printf("DEBUG board tags: %s\n", boardTagsSlice)
 }
