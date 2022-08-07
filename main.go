@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +13,42 @@ import (
 
 const storageDirectory = ".taskbook-opened"
 const storageFile = "storage.json"
+
+func initStorageFile() string {
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Failed to retrieve the user home directory: %s", err)
+	}
+
+	storageDirectorypath := filepath.Join(userHomeDir, storageDirectory)
+	err = os.MkdirAll(storageDirectorypath, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Failed to retrieve or create the storage directorypath: %s", err)
+	}
+
+	storageFilepath := filepath.Join(storageDirectorypath, storageFile)
+
+	storageFile := openOrCreateStorageFile(storageFilepath)
+	closeStorageFile(storageFile)
+
+	return storageFilepath
+}
+
+func openOrCreateStorageFile(storageFilepath string) *os.File {
+	storageFile, err := os.OpenFile(storageFilepath, os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatalf("Failed to open or create the storage file: %s", err)
+	}
+
+	return storageFile
+}
+
+func closeStorageFile(storageFile *os.File) {
+	err := storageFile.Close()
+	if err != nil {
+		log.Fatalf("Failed to close storage file: %s", err)
+	}
+}
 
 type taskStatus int
 
@@ -48,13 +84,11 @@ func (t *task) display() {
 
 type board struct {
 	Name          string
-	Counter       uint
 	Tasks         []*task
 	NumberOfTasks map[taskStatus]uint
 }
 
 func newBoard(name string) *board {
-	counter := uint(1)
 	tasks := []*task{}
 	numberOfTasks := make(map[taskStatus]uint)
 
@@ -63,7 +97,7 @@ func newBoard(name string) *board {
 	numberOfTasks[Completed] = uint(0)
 	numberOfTasks[Note] = uint(0)
 
-	return &board{name, counter, tasks, numberOfTasks}
+	return &board{name, tasks, numberOfTasks}
 }
 
 func (b *board) display() {
@@ -82,13 +116,15 @@ func (b *board) display() {
 }
 
 type taskbook struct {
-	Boards map[string]*board
+	Counter uint
+	Boards  map[string]*board
 }
 
 func newTaskbook() *taskbook {
+	counter := uint(1)
 	boards := make(map[string]*board)
 
-	return &taskbook{boards}
+	return &taskbook{counter, boards}
 }
 
 func (tb *taskbook) display() {
@@ -107,7 +143,7 @@ func readFromFileOrCreate() (tb *taskbook) {
 	return
 }
 
-func readFromFile() (tb *taskbook, err error) {
+func readFromStorageFile() (tb *taskbook, err error) {
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -125,27 +161,13 @@ func readFromFile() (tb *taskbook, err error) {
 	return
 }
 
-func (tb *taskbook) saveToFile() {
+func (tb *taskbook) saveToStorageFile(storageFile *os.File) {
 	tbJson, err := json.MarshalIndent(tb, "", " ")
 	if err != nil {
 		fmt.Println(" Failed to save to file:", err)
 		return
 	}
 
-	userHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println(" Failed to save to file:", err)
-		return
-	}
-
-	storageDirectorypath := filepath.Join(userHomeDir, storageDirectory)
-	err = os.MkdirAll(storageDirectorypath, os.ModePerm)
-	if err != nil {
-		fmt.Println(" Failed to save to file:", err)
-		return
-	}
-
-	storageFilepath := filepath.Join(storageDirectorypath, storageFile)
 	err = ioutil.WriteFile(storageFilepath, tbJson, 0644)
 	if err != nil {
 		fmt.Println(" Failed to save to file:", err)
@@ -171,8 +193,8 @@ func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus
 		board = tb.Boards[boardName]
 	}
 
-	id := board.Counter
-	board.Counter++
+	id := tb.Counter
+	tb.Counter++
 	description := taskDescription
 	status := taskStatus
 
@@ -200,20 +222,23 @@ func parseBoardNameAndTaskDescription(s string) (string, string, error) {
 func main() {
 	fmt.Print(" Taskbook opened!\n\n")
 
-	tb := readFromFileOrCreate()
-	defer tb.display()
-	defer tb.saveToFile()
+	// storageFile := openStorageFile()
+	// defer closeStorageFile(storageFile)
 
-	taskPtr := flag.String("task", "", "the description of the new task to add preceded by the corresponding #board")
-	notePtr := flag.String("note", "", "the description of the new note to add preceded by the corresponding #board")
+	// tb := readFromFileOrCreate()
+	// defer tb.display()
+	// defer tb.saveToFile()
 
-	flag.Parse()
+	// taskPtr := flag.String("task", "", "the description of the new task to add preceded by the corresponding #board")
+	// notePtr := flag.String("note", "", "the description of the new note to add preceded by the corresponding #board")
 
-	if len(*taskPtr) > 0 {
-		tb.addTask(*taskPtr, Pending)
-	}
+	// flag.Parse()
 
-	if len(*notePtr) > 0 {
-		tb.addTask(*notePtr, Note)
-	}
+	// if len(*taskPtr) > 0 {
+	// 	tb.addTask(*taskPtr, Pending)
+	// }
+
+	// if len(*notePtr) > 0 {
+	// 	tb.addTask(*notePtr, Note)
+	// }
 }
