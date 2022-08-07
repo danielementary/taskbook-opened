@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 
 const storageDirectory = ".taskbook-opened"
 const storageFile = "storage.json"
+const storageFilePermission = 0644
 
 func initStorageFile() string {
 	userHomeDir, err := os.UserHomeDir()
@@ -35,7 +35,7 @@ func initStorageFile() string {
 }
 
 func openOrCreateStorageFile(storageFilepath string) *os.File {
-	storageFile, err := os.OpenFile(storageFilepath, os.O_CREATE, 0644)
+	storageFile, err := os.OpenFile(storageFilepath, os.O_CREATE, storageFilePermission)
 	if err != nil {
 		log.Fatalf("Failed to open or create the storage file: %s", err)
 	}
@@ -133,42 +133,28 @@ func (tb *taskbook) display() {
 	}
 }
 
-func readFromFileOrCreate() (tb *taskbook) {
-	tb, err := readFromFile()
-
+func readTaskbookFromStorageFile(storageFilepath string) (tb *taskbook) {
+	tbJson, err := os.ReadFile(storageFilepath)
 	if err != nil {
+		log.Fatalf("Failed to read taskbook from storage file: %s", err)
+	}
+
+	err = json.Unmarshal(tbJson, &tb)
+	if err != nil {
+		fmt.Println("Instantiating a new taskbook...")
 		tb = newTaskbook()
 	}
 
 	return
 }
 
-func readFromStorageFile() (tb *taskbook, err error) {
-	userHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-
-	storageFilepath := filepath.Join(userHomeDir, storageDirectory, storageFile)
-
-	tbJson, err := ioutil.ReadFile(storageFilepath)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(tbJson, &tb)
-
-	return
-}
-
-func (tb *taskbook) saveToStorageFile(storageFile *os.File) {
+func (tb *taskbook) saveToStorageFile(storageFilepath string) {
 	tbJson, err := json.MarshalIndent(tb, "", " ")
 	if err != nil {
-		fmt.Println(" Failed to save to file:", err)
-		return
+		log.Fatalf("Failed to marshal taskbook: %s", err)
 	}
 
-	err = ioutil.WriteFile(storageFilepath, tbJson, 0644)
+	err = os.WriteFile(storageFilepath, tbJson, storageFilePermission)
 	if err != nil {
 		fmt.Println(" Failed to save to file:", err)
 		return
@@ -221,6 +207,8 @@ func parseBoardNameAndTaskDescription(s string) (string, string, error) {
 
 func main() {
 	fmt.Print(" Taskbook opened!\n\n")
+
+	initStorageFile()
 
 	// storageFile := openStorageFile()
 	// defer closeStorageFile(storageFile)
