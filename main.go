@@ -51,11 +51,19 @@ func closeStorageFile(storageFile *os.File) {
 type taskStatus int
 
 const (
-	InProgress taskStatus = iota
-	Pending
+	Pending taskStatus = iota
+	InProgress
 	Completed
 	Note
 )
+
+func highestPriorityTaskStatus(a, b taskStatus) taskStatus {
+	if a >= b {
+		return a
+	} else {
+		return b
+	}
+}
 
 type task struct {
 	Id          uint
@@ -81,7 +89,7 @@ func (t *task) display() {
 }
 
 type board struct {
-	Name          string
+	Tag           string
 	Tasks         []*task
 	NumberOfTasks map[taskStatus]uint
 }
@@ -101,7 +109,7 @@ func newBoard(name string) *board {
 func (b *board) display() {
 	totalNumberOfTasks := b.NumberOfTasks[InProgress] + b.NumberOfTasks[Pending] + b.NumberOfTasks[Completed]
 
-	fmt.Printf("  %s [%d/%d]\n", b.Name, b.NumberOfTasks[Completed], totalNumberOfTasks)
+	fmt.Printf("  %s [%d/%d]\n", b.Tag, b.NumberOfTasks[Completed], totalNumberOfTasks)
 
 	if totalNumberOfTasks <= 0 {
 		fmt.Print("    This board is empty.")
@@ -124,6 +132,9 @@ func newTaskbook() *taskbook {
 
 	return &taskbook{counter, boards}
 }
+
+// todo
+// func (tb *taskbook) newTask()
 
 func (tb *taskbook) display() {
 	for _, board := range tb.Boards {
@@ -186,16 +197,28 @@ func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus
 	board.NumberOfTasks[status]++
 }
 
-func parseBoardTags(taskTextSlice []string) []string {
-	boardTags := make([]string, 0)
+func parseBoardTags(taskTextSlice []string) (boardTags []string, taskStatus taskStatus) {
+	boardTags = make([]string, 0)
+	taskStatus = Pending
 
 	for _, s := range taskTextSlice {
 		if s[0] == '#' {
-			boardTags = append(boardTags, s)
+			switch s {
+			case "#pending":
+				taskStatus = highestPriorityTaskStatus(Pending, taskStatus)
+			case "#inProgress":
+				taskStatus = highestPriorityTaskStatus(InProgress, taskStatus)
+			case "#completed":
+				taskStatus = highestPriorityTaskStatus(Completed, taskStatus)
+			case "#note":
+				taskStatus = highestPriorityTaskStatus(Note, taskStatus)
+			default:
+				boardTags = append(boardTags, s)
+			}
 		}
 	}
 
-	return boardTags
+	return boardTags, taskStatus
 }
 
 func main() {
@@ -211,9 +234,9 @@ func main() {
 		return
 	}
 
-	taskTextSlice := os.Args[1:]
-	boardTagsSlice := parseBoardTags(taskTextSlice)
+	taskText := os.Args[1:]
+	boardTags, _ := parseBoardTags(taskText)
 
-	fmt.Printf("DEBUG task text:  %s\n", taskTextSlice)
-	fmt.Printf("DEBUG board tags: %s\n", boardTagsSlice)
+	fmt.Printf("DEBUG task text:  %s\n", taskText)
+	fmt.Printf("DEBUG board tags: %s\n", boardTags)
 }
