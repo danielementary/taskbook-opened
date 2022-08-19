@@ -180,16 +180,6 @@ func (tb *taskbook) saveToStorageFile(storageFilepath string) {
 	}
 }
 
-// func (tb *taskbook) addTask(s string, taskStatus taskStatus) {
-// 	boardName, taskDescription, err := parseBoardNameAndTaskDescription(s)
-
-// 	if err != nil {
-// 		fmt.Println(" Failed to add task:", err)
-// 	} else {
-// 		tb.addTaskToBoard(boardName, taskDescription, taskStatus)
-// 	}
-// }
-
 // func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus taskStatus) {
 // 	board, found := tb.Boards[boardName]
 
