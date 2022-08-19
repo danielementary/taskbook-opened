@@ -124,17 +124,27 @@ func (b *board) display() {
 type taskbook struct {
 	Counter uint
 	Boards  map[string]*board
+	Tasks   []*task
 }
 
 func newTaskbook() *taskbook {
 	counter := uint(1)
 	boards := make(map[string]*board)
+	tasks := make([]*task, 0)
 
-	return &taskbook{counter, boards}
+	return &taskbook{counter, boards, tasks}
 }
 
-// todo
-// func (tb *taskbook) newTask()
+func (tb *taskbook) newTask(description string, status taskStatus) *task {
+	id := tb.Counter
+	tb.Counter++
+
+	task := &task{id, description, status}
+
+	tb.Tasks = append(tb.Tasks, task)
+
+	return task
+}
 
 func (tb *taskbook) display() {
 	for _, board := range tb.Boards {
@@ -180,22 +190,22 @@ func (tb *taskbook) saveToStorageFile(storageFilepath string) {
 // 	}
 // }
 
-func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus taskStatus) {
-	board, found := tb.Boards[boardName]
+// func (tb *taskbook) addTaskToBoard(boardName, taskDescription string, taskStatus taskStatus) {
+// 	board, found := tb.Boards[boardName]
 
-	if !found {
-		tb.Boards[boardName] = newBoard(boardName)
-		board = tb.Boards[boardName]
-	}
+// 	if !found {
+// 		tb.Boards[boardName] = newBoard(boardName)
+// 		board = tb.Boards[boardName]
+// 	}
 
-	id := tb.Counter
-	tb.Counter++
-	description := taskDescription
-	status := taskStatus
+// 	id := tb.Counter
+// 	tb.Counter++
+// 	description := taskDescription
+// 	status := taskStatus
 
-	board.Tasks = append(board.Tasks, &task{id, description, status})
-	board.NumberOfTasks[status]++
-}
+// 	board.Tasks = append(board.Tasks, &task{id, description, status})
+// 	board.NumberOfTasks[status]++
+// }
 
 func parseBoardTags(taskTextSlice []string) (boardTags []string, taskStatus taskStatus) {
 	boardTags = make([]string, 0)
